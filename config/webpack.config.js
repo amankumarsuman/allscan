@@ -754,3 +754,23 @@ module.exports = function (webpackEnv) {
     performance: false,
   };
 };
+// webpack.config.js
+module.exports = {
+  // ...
+  devtool: "eval-source-map",
+  // ...
+};
+// webpack.config.js
+module.exports = {
+  // ...
+  module: {
+    rules: [
+      // ...
+      {
+        test: /web3\.min\.js$/,
+        use: ["source-map-loader"],
+        enforce: "pre",
+      },
+    ],
+  },
+};

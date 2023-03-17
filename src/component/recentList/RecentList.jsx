@@ -1,3 +1,51 @@
+// import React, { useState, useEffect } from "react";
+// import "./RecentList.css";
+// import Web3 from "web3";
+
+// function RecentList({ type }) {
+//   const [recentList, setRecentList] = useState([]);
+
+//   useEffect(() => {
+//     const web3 = new Web3(
+//       "https://mainnet.infura.io/v3/320147bac521449188ac7347ba389fb5"
+//     );
+//     // Replace <YOUR_INFURA_PROJECT_ID> with your Infura project ID
+//     console.log(web3, "web");
+//     const fetchRecentList = async () => {
+//       try {
+//         let result;
+//         if (type === "transactions") {
+//           result = await web3.eth.getBlock("latest");
+//         } else if (type === "blocks") {
+//           result = await web3.eth.getPastLogs({
+//             fromBlock: 0,
+//             toBlock: "latest",
+//             topics: [],
+//           });
+//         }
+//         setRecentList(result);
+//       } catch (error) {
+//         console.error(error);
+//       }
+//     };
+
+//     fetchRecentList();
+//   }, [type]);
+
+//   return (
+//     <div className="recent-list">
+//       <h2>Recent {type}</h2>
+//       <ul>
+//         {recentList?.map((item) => (
+//           <li key={item.hash}>{item.hash}</li>
+//         ))}
+//       </ul>
+//     </div>
+//   );
+// }
+
+// export default RecentList;
+
 import React, { useState, useEffect } from "react";
 import "./RecentList.css";
 import Web3 from "web3";
@@ -9,36 +57,61 @@ function RecentList({ type }) {
     const web3 = new Web3(
       "https://mainnet.infura.io/v3/320147bac521449188ac7347ba389fb5"
     );
-    // Replace <YOUR_INFURA_PROJECT_ID> with your Infura project ID
+    const batchSize = 1000;
+    const startBlock = 0;
+    const endBlock = "latest";
 
-    const fetchRecentList = async () => {
+    let batch = new web3.BatchRequest();
+
+    const fetchRecentList = async (batchStart, batchEnd) => {
       try {
         let result;
         if (type === "transactions") {
-          result = await web3.eth.getBlock("latest");
+          result = await web3.eth.getBlockRange(batchStart, batchEnd, true);
         } else if (type === "blocks") {
           result = await web3.eth.getPastLogs({
-            fromBlock: 0,
-            toBlock: "latest",
+            fromBlock: batchStart,
+            toBlock: batchEnd,
             topics: [],
           });
         }
-        setRecentList(result);
+        setRecentList((prevList) => [...prevList, ...result]);
       } catch (error) {
         console.error(error);
       }
     };
 
-    fetchRecentList();
+    for (let i = startBlock; i <= endBlock; i += batchSize) {
+      let batchStart = i;
+      let batchEnd = Math.min(i + batchSize - 1, endBlock);
+
+      let request = web3.eth.getBlockRange.request(
+        batchStart,
+        batchEnd,
+        true,
+        (error, result) => {
+          if (error) {
+            console.error(error);
+            return;
+          }
+
+          fetchRecentList(batchStart, batchEnd);
+        }
+      );
+
+      batch.add(request);
+    }
+
+    batch.execute();
   }, [type]);
 
   return (
     <div className="recent-list">
       <h2>Recent {type}</h2>
       <ul>
-        {/* {recentList?.map((item) => (
+        {recentList?.map((item) => (
           <li key={item.hash}>{item.hash}</li>
-        ))} */}
+        ))}
       </ul>
     </div>
   );
